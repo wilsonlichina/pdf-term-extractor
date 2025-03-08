@@ -19,6 +19,8 @@
 
 ## 安装与配置
 
+### 方式一：本地安装
+
 1. 克隆或下载此仓库
    ```bash
    git clone https://github.com/yourusername/pdf-term-extractor.git
@@ -41,6 +43,111 @@
      AWS_SECRET_ACCESS_KEY=your_secret_access_key_here
      AWS_REGION=us-east-1  # 改成您的 AWS 区域，确保该区域支持 Bedrock 和所需模型
      ```
+
+### 方式二：Docker 容器化部署
+
+Docker 部署方案采用多阶段构建，优化了镜像大小并加强了安全性。支持通过环境变量或配置文件两种方式进行 AWS 认证配置。
+
+#### 1. 构建 Docker 镜像
+
+```bash
+# 在项目根目录下执行构建
+docker build -t pdf-term-extractor .
+```
+
+镜像构建特点：
+- 采用多阶段构建，优化镜像大小
+- 使用 Python 虚拟环境隔离依赖
+- 集成安全加固措施
+- 配置健康检查机制
+
+#### 2. 运行容器
+
+提供两种 AWS 认证配置方式：
+
+##### 方式 A：使用环境变量（推荐用于测试环境）
+
+```bash
+docker run -d \
+  --name pdf-extractor \
+  -p 7860:7860 \
+  -e AWS_ACCESS_KEY_ID=您的访问密钥ID \
+  -e AWS_SECRET_ACCESS_KEY=您的访问密钥 \
+  -e AWS_REGION=您的区域代码 \
+  -v $(pwd)/glossary_files:/app/glossary_files \
+  pdf-term-extractor
+```
+
+##### 方式 B：使用 AWS 凭证文件（推荐用于生产环境）
+
+1. 准备 AWS 凭证文件：
+   ```bash
+   # 创建配置目录
+   mkdir -p .aws
+   
+   # 复制示例配置文件
+   cp aws-credentials.example .aws/credentials
+   
+   # 编辑凭证文件，填入您的 AWS 凭证信息
+   vim .aws/credentials
+   ```
+
+2. 启动容器：
+   ```bash
+   docker run -d \
+     --name pdf-extractor \
+     -p 7860:7860 \
+     -v $(pwd)/.aws:/app/.aws \
+     -v $(pwd)/glossary_files:/app/glossary_files \
+     pdf-term-extractor
+   ```
+
+#### 3. 容器管理命令
+
+```bash
+# 查看容器日志
+docker logs pdf-extractor
+
+# 停止容器
+docker stop pdf-extractor
+
+# 重启容器
+docker restart pdf-extractor
+
+# 删除容器
+docker rm -f pdf-extractor
+```
+
+#### 4. 安全性说明
+
+- 容器以非 root 用户运行，增强安全性
+- AWS 凭证文件权限严格控制（700）
+- 集成 Tini 作为初始化系统，确保进程管理
+- 定期安全更新基础镜像
+
+#### 5. 数据持久化
+
+- glossary_files 目录自动挂载为数据卷
+- 术语表 CSV 文件保存在宿主机，容器重启不会丢失
+- 支持定期备份挂载目录数据
+
+#### 6. 健康检查
+
+- 内置自动健康检查机制
+- 每 30 秒检查一次应用状态
+- 支持容器编排系统的自动恢复
+
+#### 7. 访问应用
+
+容器启动后，通过浏览器访问：http://localhost:7860
+
+所有功能与本地部署版本完全一致：
+- 模型选择
+- PDF 文件上传
+- 术语提取预览
+- 提示词编辑
+- CSV 导出
+- 日志显示
 
 ## 使用方法
 
@@ -97,6 +204,9 @@ pdf-term-extractor/
 ├── requirements.txt       # 依赖包列表
 ├── .env.example           # 环境变量示例文件
 ├── README.md              # 项目说明文档
+├── Dockerfile            # Docker 构建文件
+├── .dockerignore         # Docker 构建忽略文件
+├── docker-entrypoint.sh  # Docker 容器启动脚本
 ├── glossary_files/        # 生成的术语表保存目录
 └── src/
     ├── __init__.py        # 包初始化文件

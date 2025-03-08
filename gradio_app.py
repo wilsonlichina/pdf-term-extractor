@@ -216,34 +216,78 @@ def create_app():
         padding: 10px;
         margin-top: 10px;
     }
-    .pdf-upload-column {
+    /* 优化PDF上传区域的样式 */
+    .gradio-file {
         border: 1px solid #e0e0e0;
-        border-radius: 5px;
+        border-radius: 8px;
         padding: 15px;
-        margin: 0 10px;
+        margin: 0 8px;
         background-color: #f9f9f9;
+        min-height: 120px;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .gradio-file:hover {
+        box-shadow: 0 5px 10px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    .gradio-file::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        z-index: 1;
+    }
+    /* 英文PDF区域标识色 */
+    .gradio-file:first-child::before {
+        background: linear-gradient(to right, #fbbc05, #ea4335);
+    }
+    /* 中文PDF区域标识色 */
+    .gradio-file:last-child::before {
+        background: linear-gradient(to right, #4285f4, #34a853);
+    }
+    /* 美化文件上传控件 */
+    .file-preview {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    /* 优化行间距和PDF上传区域整体布局 */
+    .pdf-upload-row {
+        margin-bottom: 25px !important;
+        gap: 20px;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    /* Make file labels more prominent */
+    .gradio-file label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    /* Better file upload button styling */
+    .gradio-file button {
+        background-color: #f2f2f2;
+        border: 1px dashed #ccc;
+        transition: all 0.2s ease;
+    }
+    
+    .gradio-file button:hover {
+        background-color: #e6e6e6;
+        border-color: #999;
+    }
+    
+    /* 确保两个文件上传组件的宽度相等 */
+    .gradio-file {
         flex: 1;
-        min-width: 45%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: box-shadow 0.3s ease;
-    }
-    .pdf-upload-column:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .pdf-upload-column h3 {
-        margin-top: 0;
-        color: #444;
-        font-size: 1.2em;
-        text-align: center;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #eaeaea;
-    }
-    /* Add a subtle visual indicator for PDF language */
-    .pdf-upload-column:first-child {
-        border-left: 3px solid #91c7f5;  /* Blue tint for Chinese */
-    }
-    .pdf-upload-column:last-child {
-        border-left: 3px solid #f5c791;  /* Orange tint for English */
+        min-width: 0; /* 防止flex子项溢出 */
     }
     """
     
@@ -266,15 +310,19 @@ def create_app():
         with gr.Row():
             with gr.Column(scale=1):
                 gr.Markdown("## 1. 上传 PDF 文件")
-                # 左右分栏式布局设计，将中英文PDF上传区域分别放置在界面左右两侧
-                with gr.Row():
-                    with gr.Column(scale=1, elem_classes=["pdf-upload-column"]):
-                        gr.Markdown("### 中文 PDF")
-                        chinese_pdf = gr.File(label="上传中文 PDF 文件", file_types=[".pdf"], type="filepath")
-                    
-                    with gr.Column(scale=1, elem_classes=["pdf-upload-column"]):
-                        gr.Markdown("### 英文 PDF")
-                        english_pdf = gr.File(label="上传英文 PDF 文件", file_types=[".pdf"], type="filepath")
+                # 左右分栏式布局设计，将中英文PDF上传区域分别放置在同一行的两个scale
+                with gr.Column(scale=2):
+                    with gr.Row(elem_classes=["pdf-upload-row"]):
+                        english_pdf = gr.File(
+                            label="English Document (英文文档)", 
+                            file_types=[".pdf"], 
+                            type="filepath"
+                        )
+                        chinese_pdf = gr.File(
+                            label="Chinese Document (中文文档)", 
+                            file_types=[".pdf"], 
+                            type="filepath"
+                        )
                 
                 gr.Markdown("## 2. 选择模型")
                 model_dropdown = gr.Dropdown(

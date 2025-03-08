@@ -58,12 +58,9 @@ missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
 
 # Available models list
 MODELS = [
-    "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Default
-    "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "anthropic.claude-3-7-sonnet-20240620-v1:0",  # Corrected model ID
-    "anthropic.claude-3-opus-20240229-v1:0",
-    "amazon.nova-lite-v1:0",
-    "amazon.nova-pro-v1:0"
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0",  # Default
+    "us.amazon.nova-lite-v1:0",
+    "us.amazon.nova-pro-v1:0"
 ]
 
 # Default system prompt for terminology extraction

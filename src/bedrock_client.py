@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class BedrockClient:
     """Client for interacting with AWS Bedrock Converse API."""
     
-    def __init__(self, model_id="anthropic.claude-3-5-sonnet-20241022-v2:0", region_name=None):
+    def __init__(self, model_id="us.anthropic.claude-3-5-sonnet-20241022-v2:0", region_name=None):
         """
         Initialize the Bedrock client.
         
@@ -22,8 +22,34 @@ class BedrockClient:
             model_id (str): The ID of the Bedrock model to use
             region_name (str): AWS region name (defaults to AWS_REGION env var or 'us-east-1')
         """
-        self.model_id = model_id
+        self.original_model_id = model_id
         self.region_name = region_name or os.environ.get("AWS_REGION", "us-east-1")
+        
+        # Map Nova model IDs to their inference profile ARNs if needed
+        if "nova" in model_id.lower():
+            # Extract your account ID from the environment or configuration
+            # This is a placeholder - you should replace with actual logic to get your AWS account ID
+            # AWS_ACCOUNT_ID should be set as an environment variable
+            account_id = os.environ.get("AWS_ACCOUNT_ID", "")
+            
+            if account_id:
+                if "nova-lite" in model_id.lower():
+                    # Format: arn:aws:bedrock:[region]:[account-id]:inference-profile/[profile-name]
+                    self.model_id = f"arn:aws:bedrock:{self.region_name}:{account_id}:inference-profile/nova-lite-profile"
+                    logger.info(f"Using inference profile ARN for Nova Lite: {self.model_id}")
+                elif "nova-pro" in model_id.lower():
+                    self.model_id = f"arn:aws:bedrock:{self.region_name}:{account_id}:inference-profile/nova-pro-profile"
+                    logger.info(f"Using inference profile ARN for Nova Pro: {self.model_id}")
+                else:
+                    # Default Nova profile
+                    self.model_id = f"arn:aws:bedrock:{self.region_name}:{account_id}:inference-profile/nova-profile"
+                    logger.info(f"Using default inference profile ARN for Nova: {self.model_id}")
+            else:
+                logger.warning("AWS_ACCOUNT_ID not set. Falling back to direct model ID, which may fail for Nova models.")
+                self.model_id = model_id
+        else:
+            # For non-Nova models, use the model ID directly
+            self.model_id = model_id
         
         logger.info(f"Initializing Bedrock client with model: {model_id} in region: {self.region_name}")
         
@@ -53,28 +79,29 @@ class BedrockClient:
         logger.info(f"Calling Bedrock Converse API with {len(messages)} messages")
         
         try:
-            # Prepare the request body
-            request_body = {
-                "anthropic_version": "bedrock-2023-05-31",
-                "messages": messages,
-                "max_tokens": max_tokens,
+            # Create inference config
+            inference_config = {
+                "maxTokens": max_tokens,
                 "temperature": temperature
             }
             
-            # Convert request body to JSON string
-            request_json = json.dumps(request_body)
-            
-            # Call the Bedrock API
-            response = self.bedrock.invoke_model(
+            # Call the Bedrock converse API for all models
+            logger.info(f"Using bedrock.converse API for model: {self.model_id}")
+            response = self.bedrock.converse(
                 modelId=self.model_id,
-                body=request_json
+                messages=messages,
+                inferenceConfig=inference_config
             )
             
-            # Parse and return the response
-            response_body = json.loads(response.get("body").read())
+            # Format response to be consistent
+            formatted_response = {
+                "content": [
+                    {"text": response["output"]["message"]["content"][0]["text"]}
+                ]
+            }
             
             logger.info("Successfully received response from Bedrock Converse API")
-            return response_body
+            return formatted_response
         
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -164,7 +191,6 @@ Return format example:
                 "role": "user",
                 "content": [
                     {
-                        "type": "text",
                         "text": formatted_prompt
                     }
                 ]
@@ -173,7 +199,7 @@ Return format example:
         
         # Call the API
         try:
-            response = self.converse(messages, max_tokens=4096, temperature=0.0)
+            response = self.converse(messages, max_tokens=5000, temperature=0.0)
             
             # Extract the XML content from the response
             if "content" in response and len(response["content"]) > 0:
@@ -226,3 +252,5 @@ Return format example:
         except Exception as e:
             logger.error(f"Error extracting terminology: {str(e)}")
             raise
+
+
